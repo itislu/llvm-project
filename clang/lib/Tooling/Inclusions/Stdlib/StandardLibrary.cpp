@@ -131,7 +131,7 @@ static int initialize(Lang Language) {
     Mapping->SymbolNames[SymIndex] = {
         QName.data(), NSLen, static_cast<unsigned int>(QName.size() - NSLen)};
     if (!HeaderName.empty())
-       Mapping->SymbolHeaderIDs[SymIndex].push_back(AddHeader(HeaderName));
+      Mapping->SymbolHeaderIDs[SymIndex].push_back(AddHeader(HeaderName));
 
     NSSymbolMap &NSSymbols = AddNS(QName.take_front(NSLen));
     NSSymbols.try_emplace(QName.drop_front(NSLen), SymIndex);
@@ -142,25 +142,32 @@ static int initialize(Lang Language) {
     unsigned NSLen;
     const char *HeaderName;
   };
+  auto CompareSymbols = [](const Symbol &A, const Symbol &B) {
+    return StringRef(A.QName) < StringRef(B.QName);
+  };
 #define SYMBOL(Name, NS, Header)                                               \
   {#NS #Name, static_cast<decltype(Symbol::NSLen)>(StringRef(#NS).size()),     \
    #Header},
   switch (Language) {
   case Lang::C: {
-    static constexpr Symbol CSymbols[] = {
+    // FIXME: change to constexpr with C++20
+    static Symbol CSymbols[] = {
 #include "CSpecialSymbolMap.inc"
 #include "CSymbolMap.inc"
     };
+    llvm::sort(CSymbols, CompareSymbols);
     for (const Symbol &S : CSymbols)
       Add(S.QName, S.NSLen, S.HeaderName);
     break;
   }
   case Lang::CXX: {
-    static constexpr Symbol CXXSymbols[] = {
+    // FIXME: change to constexpr with C++20
+    static Symbol CXXSymbols[] = {
 #include "StdSpecialSymbolMap.inc"
 #include "StdSymbolMap.inc"
 #include "StdTsSymbolMap.inc"
     };
+    llvm::sort(CXXSymbols, CompareSymbols);
     for (const Symbol &S : CXXSymbols)
       Add(S.QName, S.NSLen, S.HeaderName);
     break;
@@ -236,7 +243,7 @@ std::optional<Symbol> Symbol::named(llvm::StringRef Scope, llvm::StringRef Name,
   return std::nullopt;
 }
 std::optional<Header> Symbol::header() const {
-  const auto& Headers = getMappingPerLang(Language)->SymbolHeaderIDs[ID];
+  const auto &Headers = getMappingPerLang(Language)->SymbolHeaderIDs[ID];
   if (Headers.empty())
     return std::nullopt;
   return Header(Headers.front(), Language);
