@@ -14,6 +14,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include <chrono>
+#include <fstream>
 #include <optional>
 
 namespace clang {
@@ -155,9 +157,24 @@ static int initialize(Lang Language) {
 #include "CSpecialSymbolMap.inc"
 #include "CSymbolMap.inc"
     };
+    auto Start = std::chrono::high_resolution_clock::now();
     llvm::sort(CSymbols, CompareSymbols);
+    auto StopSort = std::chrono::high_resolution_clock::now();
     for (const Symbol &S : CSymbols)
       Add(S.QName, S.NSLen, S.HeaderName);
+    auto StopAdd = std::chrono::high_resolution_clock::now();
+    if (auto OF = std::ofstream("/tmp/c-sort-time.txt", std::ios::app)) {
+      OF << "C symbols sorting took "
+         << std::chrono::duration_cast<std::chrono::microseconds>(StopSort -
+                                                                  Start)
+                .count()
+         << " us\n";
+      OF << "C symbols adding took "
+         << std::chrono::duration_cast<std::chrono::microseconds>(StopAdd -
+                                                                  StopSort)
+                .count()
+         << " us\n";
+    }
     break;
   }
   case Lang::CXX: {
@@ -167,9 +184,24 @@ static int initialize(Lang Language) {
 #include "StdSymbolMap.inc"
 #include "StdTsSymbolMap.inc"
     };
+    auto Start = std::chrono::high_resolution_clock::now();
     llvm::sort(CXXSymbols, CompareSymbols);
+    auto StopSort = std::chrono::high_resolution_clock::now();
     for (const Symbol &S : CXXSymbols)
       Add(S.QName, S.NSLen, S.HeaderName);
+    auto StopAdd = std::chrono::high_resolution_clock::now();
+    if (auto OF = std::ofstream("/tmp/cxx-sort-time.txt", std::ios::app)) {
+      OF << "CXX symbols sorting took "
+         << std::chrono::duration_cast<std::chrono::microseconds>(StopSort -
+                                                                  Start)
+                .count()
+         << " us\n";
+      OF << "CXX symbols adding took "
+         << std::chrono::duration_cast<std::chrono::microseconds>(StopAdd -
+                                                                  StopSort)
+                .count()
+         << " us\n";
+    }
     break;
   }
   }
